@@ -11,136 +11,110 @@
     <style>
         :root { --bg: #121212; --panel: #262421; --accent: #81b64c; --text: #bababa; --border: #312e2b; }
         body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* Navbar */
-        header { padding: 10px; background: #1e1e1e; border-bottom: 2px solid var(--border); display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        header { padding: 10px; background: #1e1e1e; border-bottom: 2px solid var(--border); display: flex; gap: 8px; justify-content: center; }
         .nav-btn { padding: 8px 12px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; font-size: 0.7rem; color: white; text-transform: uppercase; }
-
-        /* Main Layout */
-        main { display: flex; flex: 1; overflow: hidden; flex-direction: row; }
-        
-        /* Board Area */
-        .board-section { flex: 1.5; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; background: #161512; }
-        #board { width: 100%; max-width: 500px; }
-        
-        /* Sidebar Area */
-        .side-section { flex: 1; display: flex; flex-direction: column; border-left: 1px solid var(--border); background: var(--panel); max-width: 400px; }
-        .status-bar { padding: 15px; text-align: center; background: #1a1917; color: var(--accent); font-weight: bold; border-bottom: 1px solid var(--border); }
-        .controls { padding: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        main { display: flex; flex: 1; overflow: hidden; }
+        .board-section { flex: 1.5; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; }
+        #board { width: 100%; max-width: 480px; }
+        .side-section { flex: 1; display: flex; flex-direction: column; border-left: 1px solid var(--border); background: var(--panel); max-width: 350px; }
+        .status-bar { padding: 15px; text-align: center; background: #1a1917; color: var(--accent); font-weight: bold; }
+        .controls { padding: 10px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .repo-list { flex: 1; overflow-y: auto; }
-
-        /* Responsive Logic */
+        .repo-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.85rem; }
+        .repo-item.active { background: #2b2926; border-left: 4px solid var(--accent); color: white; }
         @media (max-width: 900px) {
             main { flex-direction: column; overflow-y: auto; }
-            .side-section { max-width: 100%; border-left: none; border-top: 1px solid var(--border); overflow: visible; }
-            .repo-list { height: 300px; }
+            .side-section { max-width: 100%; border-left: none; }
             #board { max-width: 90vw; }
         }
-
-        /* Repertoire Items */
-        .repo-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .repo-item.active { background: #2b2926; border-left: 4px solid var(--accent); color: white; }
     </style>
 </head>
 <body>
+    <header>
+        <button class="nav-btn" style="background:#444" onclick="window.location.href='index.html'">BACK</button>
+        <button class="nav-btn" style="background:#4583b6" onclick="exportJSON()">EXPORT</button>
+        <button class="nav-btn" style="background:#fa412d" onclick="clearAll()">WIPE</button>
+    </header>
+    <main>
+        <section class="board-section">
+            <div id="board"></div>
+            <button onclick="resetDrill()" style="width:100%; max-width:480px; background:#333; color:white; border:none; padding:12px; margin-top:10px; border-radius:4px; font-weight:bold; cursor:pointer;">RESET POSITION</button>
+        </section>
+        <section class="side-section">
+            <div class="status-bar" id="status-msg">Ready</div>
+            <div class="controls">
+                <button class="nav-btn" style="background:#3c3a38" onclick="showHint()">Hint</button>
+                <button class="nav-btn" style="background:#5c5a58" onclick="autoPlay()">Watch</button>
+                <button class="nav-btn" style="background:#4583b6" onclick="solveMove()">Solve</button>
+            </div>
+            <div class="repo-list" id="repoList"></div>
+        </section>
+    </main>
 
-<header>
-    <button class="nav-btn" style="background:#444" onclick="window.location.href='index.html'">BACK</button>
-    <button class="nav-btn" style="background:#4583b6" onclick="exportJSON()">EXPORT</button>
-    <label class="nav-btn" style="background:var(--accent); color:black;">LOAD <input type="file" id="pgnInput" hidden></label>
-    <button class="nav-btn" style="background:#fa412d" onclick="clearAll()">WIPE</button>
-</header>
+    <script>
+        let board = null, game = new Chess(), repoData = [], currentPath = [], moveIndex = 0, currentIdx = -1;
+        const sounds = { move: new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard_/default/move-self.mp3'), capture: new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard_/default/capture.mp3') };
 
-<main>
-    <section class="board-section">
-        <div id="board"></div>
-        <button onclick="resetDrill()" style="width:100%; max-width:500px; background:#333; color:white; border:none; padding:12px; margin-top:10px; border-radius:4px; font-weight:bold; cursor:pointer;">RESET POSITION</button>
-    </section>
+        window.onload = () => {
+            board = Chessboard('board', { 
+                draggable: true, position: 'start', 
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                onDrop: handleMove,
+                onSnapEnd: () => board.position(game.fen())
+            });
 
-    <section class="side-section">
-        <div class="status-bar" id="status-msg">Select a line to begin</div>
-        <div class="controls">
-            <button class="nav-btn" style="background:#3c3a38" onclick="showHint()">Hint</button>
-            <button class="nav-btn" style="background:#5c5a58" onclick="autoPlay()">Watch</button>
-            <button class="nav-btn" style="background:#4583b6" onclick="solveMove()">Solve</button>
-        </div>
-        <div class="repo-list" id="repoList"></div>
-    </section>
-</main>
-
-<script>
-    let board = null, game = new Chess(), repoData = [], currentPath = [], moveIndex = 0, currentIdx = -1;
-    const sounds = {
-        move: new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard_/default/move-self.mp3'),
-        capture: new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard_/default/capture.mp3')
-    };
-
-    window.onload = () => {
-        const saved = localStorage.getItem('chess_reps_ultimate');
-        if (saved) repoData = JSON.parse(saved);
-
-        board = Chessboard('board', { 
-            draggable: true, position: 'start', 
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-            onDrop: handleMove,
-            onSnapEnd: () => board.position(game.fen())
-        });
-
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('mode') === 'direct') {
             const directData = JSON.parse(localStorage.getItem('active_opening'));
-            if (directData) repoData = Array.isArray(directData) ? directData : [directData];
+            if (directData) {
+                repoData = Array.isArray(directData) ? directData : [directData];
+                renderSidebar();
+                setTimeout(() => loadOpening(0), 300);
+            }
+            window.addEventListener('resize', () => board.resize());
+        };
+
+        function handleMove(source, target) {
+            if (currentIdx === -1) return 'snapback';
+            let move = game.move({ from: source, to: target, promotion: 'q' });
+            if (!move || move.san !== currentPath[moveIndex]) { if (move) game.undo(); return 'snapback'; }
+            processMove(move);
         }
 
-        renderSidebar();
-        if (repoData.length > 0 && urlParams.get('mode') === 'direct') setTimeout(() => loadOpening(0), 300);
-        window.addEventListener('resize', () => board.resize());
-    };
+        function processMove(move) {
+            move.san.includes('x') ? sounds.capture.play() : sounds.move.play();
+            moveIndex++;
+            board.position(game.fen());
+            if (moveIndex < currentPath.length) {
+                setTimeout(() => {
+                    let reply = game.move(currentPath[moveIndex++]);
+                    board.position(game.fen());
+                    reply.san.includes('x') ? sounds.capture.play() : sounds.move.play();
+                    if (moveIndex === currentPath.length) $("#status-msg").text("Complete!");
+                }, 450);
+            } else { $("#status-msg").text("Complete!"); }
+        }
 
-    function handleMove(source, target) {
-        if (currentIdx === -1) return 'snapback';
-        let move = game.move({ from: source, to: target, promotion: 'q' });
-        if (!move || move.san !== currentPath[moveIndex]) { if (move) game.undo(); return 'snapback'; }
-        processMove(move);
-    }
+        function loadOpening(idx) {
+            currentIdx = idx;
+            game.reset();
+            game.load_pgn(repoData[idx].raw.replace(/\[.*?\]/g, '').trim());
+            currentPath = game.history();
+            moveIndex = 0;
+            board.start();
+            renderSidebar();
+            $("#status-msg").text(repoData[idx].name);
+        }
 
-    function processMove(move) {
-        move.san.includes('x') ? sounds.capture.play() : sounds.move.play();
-        moveIndex++;
-        board.position(game.fen());
-        if (moveIndex < currentPath.length) {
-            setTimeout(() => {
-                let reply = game.move(currentPath[moveIndex++]);
-                board.position(game.fen());
-                reply.san.includes('x') ? sounds.capture.play() : sounds.move.play();
-                if (moveIndex === currentPath.length) $("#status-msg").text("Line Complete!");
-            }, 450);
-        } else { $("#status-msg").text("Line Complete!"); }
-    }
+        function renderSidebar() {
+            document.getElementById('repoList').innerHTML = repoData.map((item, i) => `
+                <div class="repo-item ${currentIdx==i?'active':''}" onclick="loadOpening(${i})">
+                    <span>${item.name}</span>
+                </div>`).join('');
+        }
 
-    function loadOpening(idx) {
-        currentIdx = idx;
-        game.reset();
-        game.load_pgn(repoData[idx].raw.replace(/\[.*?\]/g, '').trim());
-        currentPath = game.history();
-        moveIndex = 0;
-        board.start();
-        renderSidebar();
-        $("#status-msg").text(repoData[idx].name);
-    }
-
-    function renderSidebar() {
-        document.getElementById('repoList').innerHTML = repoData.map((item, i) => `
-            <div class="repo-item ${currentIdx==i?'active':''}" onclick="loadOpening(${i})">
-                <span>${item.name}</span>
-            </div>`).join('');
-    }
-
-    function resetDrill() { game.reset(); board.start(); moveIndex = 0; }
-    function solveMove() { if (currentIdx !== -1 && moveIndex < currentPath.length) processMove(game.move(currentPath[moveIndex])); }
-    function showHint() { /* Same as V2.2 */ }
-    function exportJSON() { /* Same as V2.2 */ }
-    function clearAll() { if (confirm("Clear library?")) { repoData = []; renderSidebar(); } }
-</script>
+        function resetDrill() { game.reset(); board.start(); moveIndex = 0; }
+        function solveMove() { if (currentIdx !== -1 && moveIndex < currentPath.length) processMove(game.move(currentPath[moveIndex])); }
+        function exportJSON() { /* Logic for downloading JSON */ }
+        function clearAll() { localStorage.removeItem('active_opening'); window.location.reload(); }
+    </script>
 </body>
 </html>
