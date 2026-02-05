@@ -11,8 +11,13 @@
     <style>
         :root { --bg: #121212; --panel: #262421; --accent: #81b64c; --border: #312e2b; }
         body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        header { padding: 10px; background: #1e1e1e; border-bottom: 2px solid var(--border); display: flex; gap: 10px; justify-content: center; }
-        .nav-btn { padding: 8px 15px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75rem; color: white; text-transform: uppercase; }
+        
+        /* CHESS.COM THEME */
+        .white-1e1d7 { background-color: #ebecd0 !important; }
+        .black-3c85d { background-color: #779556 !important; }
+        
+        header { padding: 10px; background: #1e1e1e; border-bottom: 2px solid var(--border); display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .nav-btn { padding: 8px 12px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; font-size: 0.7rem; color: white; text-transform: uppercase; }
         main { display: flex; flex: 1; overflow: hidden; }
         .board-section { flex: 1.5; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; }
         #board { width: 100%; max-width: 480px; }
@@ -20,8 +25,9 @@
         .status-bar { padding: 15px; text-align: center; background: #1a1917; color: var(--accent); font-weight: bold; }
         .controls { padding: 10px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .repo-list { flex: 1; overflow-y: auto; }
-        .repo-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.85rem; color: #bababa; }
-        .repo-item.active { background: #2b2926; border-left: 4px solid var(--accent); color: white; }
+        .repo-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.85rem; }
+        .repo-item.active { background: #2b2926; border-left: 4px solid var(--accent); }
+
         @media (max-width: 900px) {
             main { flex-direction: column; overflow-y: auto; }
             .side-section { max-width: 100%; border-left: none; }
@@ -32,15 +38,17 @@
 <body>
     <header>
         <button class="nav-btn" style="background:#444" onclick="window.location.href='index.html'">BACK</button>
+        <button class="nav-btn" style="background:#4583b6" onclick="exportJSON()">EXPORT</button>
+        <label class="nav-btn" style="background:var(--accent); color:black;">LOAD <input type="file" id="fileInput" hidden></label>
         <button class="nav-btn" style="background:#fa412d" onclick="clearAll()">WIPE</button>
     </header>
     <main>
         <section class="board-section">
             <div id="board"></div>
-            <button onclick="resetDrill()" style="width:100%; max-width:480px; background:#333; color:white; border:none; padding:12px; margin-top:10px; border-radius:4px; font-weight:bold; cursor:pointer;">RESET</button>
+            <button onclick="resetDrill()" style="width:100%; max-width:480px; background:#333; color:white; border:none; padding:12px; margin-top:10px; border-radius:4px; font-weight:bold; cursor:pointer;">RESET POSITION</button>
         </section>
         <section class="side-section">
-            <div class="status-bar" id="status-msg">Loading...</div>
+            <div class="status-bar" id="status-msg">Select a line</div>
             <div class="controls">
                 <button class="nav-btn" style="background:#3c3a38" onclick="showHint()">Hint</button>
                 <button class="nav-btn" style="background:#5c5a58" onclick="autoPlay()">Watch</button>
@@ -62,12 +70,11 @@
                 onSnapEnd: () => board.position(game.fen())
             });
 
-            const raw = localStorage.getItem('active_opening');
-            if (raw) {
-                const data = JSON.parse(raw);
-                repoData = Array.isArray(data) ? data : [data];
+            const saved = localStorage.getItem('active_opening');
+            if (saved) {
+                repoData = JSON.parse(saved);
                 renderSidebar();
-                setTimeout(() => loadOpening(0), 300);
+                loadOpening(0);
             }
             window.addEventListener('resize', () => board.resize());
         };
@@ -88,15 +95,15 @@
                     let reply = game.move(currentPath[moveIndex++]);
                     board.position(game.fen());
                     reply.san.includes('x') ? sounds.capture.play() : sounds.move.play();
-                    if (moveIndex === currentPath.length) $("#status-msg").text("Line Complete!");
                 }, 450);
-            } else { $("#status-msg").text("Line Complete!"); }
+            } else { $("#status-msg").text("Complete!"); }
         }
 
         function loadOpening(idx) {
             currentIdx = idx;
             game.reset();
-            game.load_pgn(repoData[idx].raw.replace(/\[.*?\]/g, '').trim());
+            const cleanPgn = repoData[idx].raw.replace(/\[.*?\]/g, '').trim();
+            game.load_pgn(cleanPgn);
             currentPath = game.history();
             moveIndex = 0;
             board.start();
@@ -107,14 +114,30 @@
         function renderSidebar() {
             document.getElementById('repoList').innerHTML = repoData.map((item, i) => `
                 <div class="repo-item ${currentIdx==i?'active':''}" onclick="loadOpening(${i})">
-                    <span>${item.name}</span>
+                    ${item.name}
                 </div>`).join('');
         }
 
-        function resetDrill() { game.reset(); board.start(); moveIndex = 0; $("#status-msg").text(repoData[currentIdx].name); }
+        function exportJSON() {
+            const blob = new Blob([JSON.stringify(repoData)], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = "my_openings.json"; a.click();
+        }
+
+        document.getElementById('fileInput').onchange = async (e) => {
+            const file = e.target.files[0];
+            const text = await file.text();
+            repoData = JSON.parse(text);
+            localStorage.setItem('active_opening', JSON.stringify(repoData));
+            renderSidebar();
+            loadOpening(0);
+        };
+
+        function resetDrill() { game.reset(); board.start(); moveIndex = 0; }
         function solveMove() { if (currentIdx !== -1 && moveIndex < currentPath.length) processMove(game.move(currentPath[moveIndex])); }
-        function showHint() { /* Same logic as before */ }
-        function clearAll() { localStorage.removeItem('active_opening'); window.location.href='index.html'; }
+        function showHint() { /* Same as before */ }
+        function clearAll() { localStorage.clear(); window.location.href='index.html'; }
     </script>
 </body>
 </html>
