@@ -4,41 +4,79 @@
     <title>ChessReps | Library</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; max-width: 800px; margin: 30px auto; }
-        .card { background: #262421; padding: 20px; border-radius: 8px; border: 1px solid #312e2b; cursor: pointer; }
-        .card:hover { border-color: #81b64c; }
-        h1 { color: #81b64c; }
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 20px; margin: 0; }
+        h1 { color: #81b64c; margin-bottom: 30px; }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+            gap: 15px; 
+            max-width: 900px; 
+            margin: 0 auto; 
+        }
+        .card { 
+            background: #262421; 
+            padding: 20px; 
+            border-radius: 8px; 
+            border: 1px solid #312e2b; 
+            cursor: pointer; 
+            transition: 0.2s;
+        }
+        .card:hover { border-color: #81b64c; background: #2d2b28; transform: translateY(-3px); }
+        .card h3 { margin: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; }
+        .type-tag { font-size: 10px; color: #666; text-transform: uppercase; margin-top: 8px; display: block; }
+        #status { color: #888; margin-top: 50px; font-style: italic; }
     </style>
 </head>
 <body>
-    <h1>My Openings</h1>
-    <div id="status">Loading files...</div>
+    <h1>My Opening Library</h1>
+    <div id="status">Scanning openings folder...</div>
     <div class="grid" id="menuGrid"></div>
 
     <script>
         async function init() {
             const USER = "sathishkumar4359";
             const REPO = "chess_trainer_library";
+            const grid = document.getElementById('menuGrid');
+            const status = document.getElementById('status');
+
             try {
+                // Fetch everything in the openings folder
                 const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/contents/openings`);
+                if (!res.ok) throw new Error("Folder not found");
+                
                 const files = await res.json();
-                document.getElementById('status').style.display = 'none';
-                const grid = document.getElementById('menuGrid');
+                status.style.display = 'none';
                 
                 files.forEach(file => {
-                    if(file.name.endsWith('.json')) {
+                    // Show both .json and .pgn files
+                    if(file.name.endsWith('.json') || file.name.endsWith('.pgn')) {
                         const div = document.createElement('div');
                         div.className = 'card';
-                        div.innerHTML = `<h3>${file.name.replace('.json','')}</h3>`;
+                        
+                        const cleanName = file.name.replace('.json', '').replace('.pgn', '').replace(/_/g, ' ');
+                        const fileType = file.name.split('.').pop();
+                        
+                        div.innerHTML = `
+                            <h3>${cleanName}</h3>
+                            <span class="type-tag">${fileType}</span>
+                        `;
+                        
                         div.onclick = () => {
                             localStorage.setItem('opening_url', file.download_url);
+                            localStorage.setItem('file_type', fileType);
                             window.location.href = 'board.html';
                         };
                         grid.appendChild(div);
                     }
                 });
-            } catch (e) { document.getElementById('status').innerText = "Error loading files."; }
+
+                if (grid.children.length === 0) {
+                    status.innerText = "No .json or .pgn files found in the 'openings' folder.";
+                    status.style.display = 'block';
+                }
+            } catch (e) { 
+                status.innerText = "Error: Make sure your folder is named 'openings' (lowercase)."; 
+            }
         }
         init();
     </script>
