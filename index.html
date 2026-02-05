@@ -8,22 +8,22 @@
         :root { --bg: #121212; --panel: #262421; --accent: #81b64c; --text: #fff; }
         body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: 0 auto; }
-        header { text-align: center; padding: 30px 0; }
-        h1 { color: var(--accent); margin: 0; font-size: 2.2rem; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 30px; }
+        header { text-align: center; padding: 20px 0; }
+        h1 { color: var(--accent); margin: 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-top: 30px; }
         .card { 
             background: var(--panel); padding: 25px; border-radius: 12px; border: 1px solid #312e2b; 
             cursor: pointer; transition: 0.3s; text-align: center;
         }
         .card:hover { border-color: var(--accent); transform: translateY(-5px); background: #2d2b28; }
         .line-count { color: #888; font-size: 0.85rem; margin-top: 10px; }
-        #status { text-align: center; color: #666; margin-top: 20px; }
+        #status { text-align: center; color: #666; margin-top: 50px; font-style: italic; }
     </style>
 </head>
 <body>
     <div class="container">
         <header><h1>Opening Library</h1></header>
-        <div id="status">Scanning GitHub for openings...</div>
+        <div id="status">Connecting to openings folder...</div>
         <div class="grid" id="menuGrid"></div>
     </div>
 
@@ -32,46 +32,42 @@
             const grid = document.getElementById('menuGrid');
             const status = document.getElementById('status');
             
-            // Your specific GitHub details
-            const USER = "sathishkumar4359"; 
-            const REPO = "chess_trainer_library";
-            const FOLDER = "openings"; 
+            // Your EXACT GitHub info
+            const user = "sathishkumar4359";
+            const repo = "chess_trainer_library";
+            const folder = "openings";
 
             try {
-                // Fetch list of files from GitHub API
-                const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${FOLDER}`;
-                const response = await fetch(url);
+                // Fetching the folder content via GitHub API
+                const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${folder}`);
                 
-                if (!response.ok) throw new Error("Folder not found");
-                
+                if (!response.ok) throw new Error("Folder not found or API limit reached");
+
                 const files = await response.json();
-                status.style.display = 'none';
                 grid.innerHTML = '';
+                status.style.display = 'none';
 
                 for (const file of files) {
-                    if (!file.name.endsWith('.json')) continue;
+                    if (file.name.endsWith('.json')) {
+                        const contentRes = await fetch(file.download_url);
+                        const data = await contentRes.json();
+                        
+                        const count = Array.isArray(data) ? data.length : 1;
+                        const name = (Array.isArray(data) ? data[0].name : data.name) || file.name.replace('.json', '');
 
-                    // Fetch file content to get internal name and line count
-                    const contentRes = await fetch(file.download_url);
-                    const data = await contentRes.json();
-                    
-                    const count = Array.isArray(data) ? data.length : 1;
-                    const displayName = (Array.isArray(data) ? data[0].name : data.name) || 
-                                      file.name.replace('.json', '').replace(/_/g, ' ');
-
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.innerHTML = `<h3>${displayName}</h3><div class="line-count">${count} Variations</div>`;
-                    
-                    card.onclick = () => {
-                        localStorage.setItem('active_opening', JSON.stringify(data));
-                        window.location.href = 'board.html?mode=direct';
-                    };
-                    grid.appendChild(card);
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        card.innerHTML = `<h3>${name}</h3><div class="line-count">${count} Variations</div>`;
+                        card.onclick = () => {
+                            localStorage.setItem('active_opening', JSON.stringify(data));
+                            window.location.href = 'board.html?mode=direct';
+                        };
+                        grid.appendChild(card);
+                    }
                 }
-            } catch (e) {
-                status.innerHTML = "No openings found. Make sure files are in the 'openings' folder.";
-                console.error(e);
+            } catch (err) {
+                status.innerHTML = "Error: Folder not found. Make sure 'openings' folder exists and has .json files.";
+                console.error(err);
             }
         }
         window.onload = loadMenu;
