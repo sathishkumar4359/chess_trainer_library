@@ -12,7 +12,7 @@
         :root { --bg: #121212; --panel: #262421; --accent: #81b64c; --border: #312e2b; }
         body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* CHESS.COM THEME */
+        /* CHESS.COM COLORS */
         .white-1e1d7 { background-color: #ebecd0 !important; }
         .black-3c85d { background-color: #779556 !important; }
         
@@ -25,8 +25,8 @@
         .status-bar { padding: 15px; text-align: center; background: #1a1917; color: var(--accent); font-weight: bold; }
         .controls { padding: 10px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .repo-list { flex: 1; overflow-y: auto; }
-        .repo-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.85rem; }
-        .repo-item.active { background: #2b2926; border-left: 4px solid var(--accent); }
+        .repo-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.85rem; color: #bababa; }
+        .repo-item.active { background: #2b2926; border-left: 4px solid var(--accent); color: white; }
 
         @media (max-width: 900px) {
             main { flex-direction: column; overflow-y: auto; }
@@ -38,8 +38,9 @@
 <body>
     <header>
         <button class="nav-btn" style="background:#444" onclick="window.location.href='index.html'">BACK</button>
+        <button class="nav-btn" style="background:#666" onclick="flipBoard()">FLIP</button>
         <button class="nav-btn" style="background:#4583b6" onclick="exportJSON()">EXPORT</button>
-        <label class="nav-btn" style="background:var(--accent); color:black;">LOAD <input type="file" id="fileInput" hidden></label>
+        <label class="nav-btn" style="background:var(--accent); color:black;">LOAD <input type="file" id="fIn" hidden></label>
         <button class="nav-btn" style="background:#fa412d" onclick="clearAll()">WIPE</button>
     </header>
     <main>
@@ -63,11 +64,11 @@
         const sounds = { move: new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard_/default/move-self.mp3'), capture: new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard_/default/capture.mp3') };
 
         window.onload = () => {
+            const orient = localStorage.getItem('board_orientation') || 'white';
             board = Chessboard('board', { 
-                draggable: true, position: 'start', 
+                draggable: true, position: 'start', orientation: orient,
                 pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-                onDrop: handleMove,
-                onSnapEnd: () => board.position(game.fen())
+                onDrop: handleMove, onSnapEnd: () => board.position(game.fen())
             });
 
             const saved = localStorage.getItem('active_opening');
@@ -80,7 +81,6 @@
         };
 
         function handleMove(source, target) {
-            if (currentIdx === -1) return 'snapback';
             let move = game.move({ from: source, to: target, promotion: 'q' });
             if (!move || move.san !== currentPath[moveIndex]) { if (move) game.undo(); return 'snapback'; }
             processMove(move);
@@ -100,43 +100,52 @@
         }
 
         function loadOpening(idx) {
-            currentIdx = idx;
-            game.reset();
-            const cleanPgn = repoData[idx].raw.replace(/\[.*?\]/g, '').trim();
-            game.load_pgn(cleanPgn);
+            currentIdx = idx; game.reset();
+            const pgn = repoData[idx].raw.replace(/\[.*?\]/g, '').trim();
+            game.load_pgn(pgn);
             currentPath = game.history();
             moveIndex = 0;
             board.start();
+            
+            if (board.orientation() === 'black') {
+                setTimeout(() => {
+                    let first = game.move(currentPath[moveIndex++]);
+                    board.position(game.fen());
+                    sounds.move.play();
+                }, 500);
+            }
             renderSidebar();
             $("#status-msg").text(repoData[idx].name);
         }
 
+        function flipBoard() {
+            const no = board.orientation() === 'white' ? 'black' : 'white';
+            board.orientation(no);
+            localStorage.setItem('board_orientation', no);
+            loadOpening(currentIdx);
+        }
+
         function renderSidebar() {
             document.getElementById('repoList').innerHTML = repoData.map((item, i) => `
-                <div class="repo-item ${currentIdx==i?'active':''}" onclick="loadOpening(${i})">
-                    ${item.name}
-                </div>`).join('');
+                <div class="repo-item ${currentIdx==i?'active':''}" onclick="loadOpening(${i})">${item.name}</div>`).join('');
         }
 
         function exportJSON() {
             const blob = new Blob([JSON.stringify(repoData)], {type: "application/json"});
-            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = "my_openings.json"; a.click();
+            a.href = URL.createObjectURL(blob); a.download = "opening.json"; a.click();
         }
 
-        document.getElementById('fileInput').onchange = async (e) => {
-            const file = e.target.files[0];
-            const text = await file.text();
+        document.getElementById('fIn').onchange = async (e) => {
+            const text = await e.target.files[0].text();
             repoData = JSON.parse(text);
-            localStorage.setItem('active_opening', JSON.stringify(repoData));
-            renderSidebar();
-            loadOpening(0);
+            localStorage.setItem('active_opening', text);
+            renderSidebar(); loadOpening(0);
         };
 
-        function resetDrill() { game.reset(); board.start(); moveIndex = 0; }
-        function solveMove() { if (currentIdx !== -1 && moveIndex < currentPath.length) processMove(game.move(currentPath[moveIndex])); }
-        function showHint() { /* Same as before */ }
+        function resetDrill() { loadOpening(currentIdx); }
+        function solveMove() { if (moveIndex < currentPath.length) processMove(game.move(currentPath[moveIndex])); }
+        function showHint() { alert("Next move: " + currentPath[moveIndex]); }
         function clearAll() { localStorage.clear(); window.location.href='index.html'; }
     </script>
 </body>
