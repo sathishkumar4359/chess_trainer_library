@@ -2,63 +2,67 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChessReps | Library</title>
     <style>
         :root { --bg: #121212; --panel: #262421; --accent: #81b64c; --text: #fff; }
         body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        header { text-align: center; margin-bottom: 40px; }
-        h1 { color: var(--accent); font-size: clamp(1.8rem, 5vw, 2.5rem); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header { text-align: center; padding: 30px 0; }
+        h1 { color: var(--accent); margin: 0; font-size: 2.2rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 30px; }
         .card { 
-            background: var(--panel); padding: 30px; border-radius: 12px; border: 1px solid #312e2b; 
-            cursor: pointer; transition: 0.25s ease; display: flex; flex-direction: column; align-items: center;
+            background: var(--panel); padding: 25px; border-radius: 12px; border: 1px solid #312e2b; 
+            cursor: pointer; transition: 0.3s; text-align: center;
         }
         .card:hover { border-color: var(--accent); transform: translateY(-5px); background: #2d2b28; }
-        .card h3 { margin: 0; font-size: 1.2rem; text-align: center; color: white; }
-        .line-count { color: #888; font-size: 0.9rem; margin-top: 10px; padding: 4px 12px; background: #1a1917; border-radius: 20px; }
-        #loading { text-align: center; color: #888; margin-top: 50px; }
+        .line-count { color: #888; font-size: 0.85rem; margin-top: 10px; }
+        #status { text-align: center; color: #666; margin-top: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
         <header><h1>Opening Library</h1></header>
-        <div id="loading">Scanning openings...</div>
+        <div id="status">Scanning GitHub for openings...</div>
         <div class="grid" id="menuGrid"></div>
     </div>
 
     <script>
         async function loadMenu() {
             const grid = document.getElementById('menuGrid');
-            const loader = document.getElementById('loading');
+            const status = document.getElementById('status');
             
-            // CONFIGURATION
+            // Your specific GitHub details
             const USER = "sathishkumar4359"; 
             const REPO = "chess_trainer_library";
             const FOLDER = "openings"; 
 
             try {
+                // Fetch list of files from GitHub API
                 const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${FOLDER}`;
                 const response = await fetch(url);
+                
                 if (!response.ok) throw new Error("Folder not found");
                 
                 const files = await response.json();
-                loader.style.display = 'none';
+                status.style.display = 'none';
                 grid.innerHTML = '';
 
                 for (const file of files) {
                     if (!file.name.endsWith('.json')) continue;
 
+                    // Fetch file content to get internal name and line count
                     const contentRes = await fetch(file.download_url);
                     const data = await contentRes.json();
                     
                     const count = Array.isArray(data) ? data.length : 1;
-                    const name = (Array.isArray(data) ? data[0].name : data.name) || file.name.replace('.json', '').replace(/_/g, ' ');
+                    const displayName = (Array.isArray(data) ? data[0].name : data.name) || 
+                                      file.name.replace('.json', '').replace(/_/g, ' ');
 
                     const card = document.createElement('div');
                     card.className = 'card';
-                    card.innerHTML = `<h3>${name}</h3><div class="line-count">${count} Variations</div>`;
+                    card.innerHTML = `<h3>${displayName}</h3><div class="line-count">${count} Variations</div>`;
+                    
                     card.onclick = () => {
                         localStorage.setItem('active_opening', JSON.stringify(data));
                         window.location.href = 'board.html?mode=direct';
@@ -66,7 +70,7 @@
                     grid.appendChild(card);
                 }
             } catch (e) {
-                loader.innerHTML = "Error loading files. Check folder name and username.";
+                status.innerHTML = "No openings found. Make sure files are in the 'openings' folder.";
                 console.error(e);
             }
         }
