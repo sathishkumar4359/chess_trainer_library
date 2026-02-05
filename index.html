@@ -2,64 +2,71 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChessReps | My Openings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ChessReps | Library</title>
     <style>
         :root { --bg: #121212; --panel: #262421; --accent: #81b64c; --text: #fff; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .card { 
-            background: var(--panel); padding: 20px; border-radius: 8px; 
-            border: 1px solid #312e2b; cursor: pointer; transition: 0.2s;
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 20px; }
+        
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { color: var(--accent); font-size: clamp(1.5rem, 5vw, 2.5rem); }
+
+        /* Responsive Grid */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 20px; 
         }
-        .card:hover { border-color: var(--accent); transform: translateY(-3px); }
-        .line-count { font-size: 0.8rem; color: #888; margin-top: 5px; }
-        h1 { color: var(--accent); }
+
+        .card { 
+            background: var(--panel); padding: 30px; border-radius: 12px; 
+            border: 1px solid #312e2b; cursor: pointer; transition: 0.25s ease;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .card:hover { border-color: var(--accent); transform: translateY(-5px); background: #2d2b28; }
+        .card h3 { margin: 0; font-size: 1.2rem; text-align: center; }
+        .line-count { color: #888; font-size: 0.9rem; margin-top: 10px; padding: 4px 12px; background: #1a1917; border-radius: 20px; }
+
+        @media (max-width: 600px) {
+            body { padding: 15px; }
+            .grid { grid-template-columns: 1fr; } /* Stack on small phones */
+        }
     </style>
 </head>
 <body>
-    <h1>Opening Library</h1>
-    <div class="grid" id="menuGrid">Loading openings...</div>
+    <div class="container">
+        <header>
+            <h1>ChessReps Library</h1>
+        </header>
+        <div class="grid" id="menuGrid"></div>
+    </div>
 
     <script>
         async function loadMenu() {
             const grid = document.getElementById('menuGrid');
             try {
-                // 1. Get the list of filenames from the manifest
                 const manifestRes = await fetch('manifest.json');
                 const filenames = await manifestRes.json();
-                
-                grid.innerHTML = ''; // Clear loading text
+                grid.innerHTML = '';
 
-                // 2. Loop through each file to get its details
                 for (const file of filenames) {
                     const res = await fetch(`openings/${file}`);
                     const data = await res.json();
-                    
-                    // Handle both single objects and arrays of lines
                     const lines = Array.isArray(data) ? data.length : 1;
-                    const name = data.name || file.replace('.json', '').replace('_', ' ');
+                    const name = data[0]?.name || data.name || file.replace('.json', '').replace('_', ' ');
 
                     const card = document.createElement('div');
                     card.className = 'card';
-                    card.innerHTML = `
-                        <h3>${name}</h3>
-                        <div class="line-count">${lines} Variations</div>
-                    `;
-                    card.onclick = () => launchTrainer(data);
+                    card.innerHTML = `<h3>${name}</h3><div class="line-count">${lines} Lines</div>`;
+                    card.onclick = () => {
+                        localStorage.setItem('active_opening', JSON.stringify(data));
+                        window.location.href = 'board.html?mode=direct';
+                    };
                     grid.appendChild(card);
                 }
-            } catch (e) {
-                grid.innerHTML = "Error loading manifest. Make sure you are using a local server (like Live Server in VS Code).";
-            }
+            } catch (e) { grid.innerHTML = "<p>Run 'python -m http.server' to view openings.</p>"; }
         }
-
-        function launchTrainer(openingData) {
-            // Store the specific opening in a temporary session slot
-            localStorage.setItem('active_opening', JSON.stringify(openingData));
-            window.location.href = 'board.html?mode=direct';
-        }
-
         window.onload = loadMenu;
     </script>
 </body>
