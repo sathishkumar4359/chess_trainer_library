@@ -5,37 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        header { background: #1e1e1e; padding: 10px; display: flex; justify-content: center; gap: 10px; border-bottom: 2px solid #312e2b; }
-        main { display: flex; flex: 1; flex-wrap: wrap; overflow-y: auto; }
-        .board-container { flex: 2; display: flex; flex-direction: column; align-items: center; padding: 10px; }
-        #board { width: 95vw; max-width: 450px; }
-        /* Chess.com Theme */
-        .white-1e1d7 { background-color: #ebecd0 !important; }
-        .black-3c85d { background-color: #779556 !important; }
-        .side-bar { flex: 1; background: #262421; min-width: 300px; border-left: 1px solid #312e2b; padding: 10px; }
-        .btn { padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
-        .btn-white { background: #f0f0f0; color: #000; }
-        .btn-black { background: #000; color: #fff; border: 1px solid #444; }
-        .line-item { padding: 10px; border-bottom: 1px solid #312e2b; cursor: pointer; font-size: 14px; }
-        .line-item:hover { background: #333; }
-        .active { border-left: 4px solid #81b64c; background: #2d2b28; }
+        body { background: #09090b; color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        header { background: #18181b; padding: 15px; border-bottom: 1px solid #27272a; display: flex; justify-content: center; gap: 10px; }
+        .white-1e1d7 { background-color: #ebecd0 !important; } .black-3c85d { background-color: #779556 !important; }
+        main { display: flex; flex: 1; flex-wrap: wrap; }
+        .board-area { flex: 2; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #board { width: 90vw; max-width: 450px; border: 5px solid #27272a; border-radius: 4px; }
+        .sidebar { flex: 1; background: #18181b; border-left: 1px solid #27272a; padding: 20px; min-width: 300px; }
+        button { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-main { background: #81b64c; color: white; }
+        .btn-dark { background: #27272a; color: white; }
+        #msg { margin-top: 15px; color: #81b64c; font-weight: bold; font-size: 1.1rem; }
     </style>
 </head>
 <body>
     <header>
-        <button class="btn" style="background:#444" onclick="window.location.href='index.html'">BACK</button>
-        <button class="btn btn-white" onclick="startAs('white')">PLAY WHITE</button>
-        <button class="btn btn-black" onclick="startAs('black')">PLAY BLACK</button>
+        <button class="btn-dark" onclick="window.location.href='index.html'">BACK</button>
+        <button class="btn-main" onclick="init('white')">PLAY WHITE</button>
+        <button class="btn-main" style="background:#444" onclick="init('black')">PLAY BLACK</button>
     </header>
     <main>
-        <div class="board-container">
+        <div class="board-area">
             <div id="board"></div>
-            <p id="msg" style="color:#81b64c; font-weight:bold; margin-top:15px;">Select a mode to begin</p>
+            <div id="msg">Choose a side to start</div>
         </div>
-        <div class="side-bar">
-            <h3 id="title">Loading Opening...</h3>
-            <div id="lineList"></div>
+        <div class="sidebar">
+            <h2 id="title">Trainer</h2>
+            <div id="status-box" style="background:#09090b; padding:15px; border-radius:8px; border:1px solid #27272a;">
+                <p style="color:#71717a;">Moves will appear here...</p>
+            </div>
         </div>
     </main>
 
@@ -43,73 +41,38 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script>
-        let board, game = new Chess(), repo = [], moves = [], idx = 0, currentIdx = 0;
-        let myColor = 'white';
-
-        async function load() {
-            const url = localStorage.getItem('opening_url');
+        let board, game = new Chess(), fullMoves = [], moveIdx = 0;
+        
+        async function init(color) {
+            const url = localStorage.getItem('active_url');
+            if(!url) return;
             const res = await fetch(url);
-            const raw = await res.text();
-            try { repo = JSON.parse(raw); } catch(e) { repo = [{name: "Opening", raw: raw}]; }
+            const text = await res.text();
             
-            document.getElementById('title').innerText = repo[0].name || "Lines";
-            renderList();
-            initBoard();
-        }
-
-        function initBoard() {
-            board = Chessboard('board', {
-                draggable: true, position: 'start',
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-                onDrop: onDrop, onSnapEnd: () => board.position(game.fen())
-            });
-        }
-
-        function renderList() {
-            const list = document.getElementById('lineList');
-            list.innerHTML = repo.map((l, i) => `<div class="line-item ${i==currentIdx?'active':''}" onclick="selectLine(${i})">${l.name || 'Variation '+(i+1)}</div>`).join('');
-        }
-
-        function selectLine(i) {
-            currentIdx = i;
-            renderList();
-            startAs(myColor);
-        }
-
-        function startAs(color) {
-            myColor = color;
+            // Handle PGN or JSON
+            let pgnString = text;
+            try { const data = JSON.parse(text); pgnString = data[0].raw || data.raw; } catch(e) {}
+            
             game.reset();
-            board.orientation(color);
-            board.start();
-            moves = new Chess();
-            moves.load_pgn(repo[currentIdx].raw.replace(/\[.*?\]/g, ''));
-            moves = moves.history();
-            idx = 0;
-            document.getElementById('msg').innerText = (color === 'white') ? "Your turn (White)" : "White is moving...";
-            
-            if(color === 'black') {
-                setTimeout(computerMove, 600);
-            }
-        }
+            game.load_pgn(pgnString.replace(/\[.*?\]/g, ''));
+            fullMoves = game.history();
+            game.reset();
+            moveIdx = 0;
 
-        function onDrop(source, target) {
-            const move = game.move({ from: source, to: target, promotion: 'q' });
-            if (!move || move.san !== moves[idx]) { if(move) game.undo(); return 'snapback'; }
-            
-            idx++;
-            if(idx < moves.length) {
-                setTimeout(computerMove, 500);
-            } else { document.getElementById('msg').innerText = "Line Complete!"; }
-        }
-
-        function computerMove() {
-            game.move(moves[idx++]);
-            board.position(game.fen());
+            board = Chessboard('board', {
+                draggable: true, position: 'start', orientation: color,
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                onDrop: (s, t) => {
+                    const move = game.move({ from: s, to: t, promotion: 'q' });
+                    if (!move || move.san !== fullMoves[moveIdx]) { if(move) game.undo(); return 'snapback'; }
+                    moveIdx++;
+                    if(moveIdx < fullMoves.length) setTimeout(() => { game.move(fullMoves[moveIdx++]); board.position(game.fen()); }, 500);
+                    else document.getElementById('msg').innerText = "Perfect! Line Complete.";
+                }
+            });
+            if(color === 'black') setTimeout(() => { game.move(fullMoves[moveIdx++]); board.position(game.fen()); }, 600);
             document.getElementById('msg').innerText = "Your turn";
-            if(idx === moves.length) document.getElementById('msg').innerText = "Line Complete!";
         }
-
-        window.onload = load;
     </script>
 </body>
 </html>
