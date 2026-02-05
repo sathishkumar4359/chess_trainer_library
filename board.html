@@ -1,152 +1,109 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ChessReps | Trainer</title>
-    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-    <style>
-        :root { --bg: #121212; --panel: #262421; --accent: #81b64c; --border: #312e2b; }
-        body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* CHESS.COM COLORS */
-        .white-1e1d7 { background-color: #ebecd0 !important; }
-        .black-3c85d { background-color: #779556 !important; }
-        
-        header { padding: 10px; background: #1e1e1e; border-bottom: 2px solid var(--border); display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-        .nav-btn { padding: 8px 12px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; font-size: 0.7rem; color: white; text-transform: uppercase; }
-        main { display: flex; flex: 1; overflow: hidden; }
-        .board-section { flex: 1.5; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; }
-        #board { width: 100%; max-width: 480px; }
-        .side-section { flex: 1; display: flex; flex-direction: column; border-left: 1px solid var(--border); background: var(--panel); max-width: 350px; }
-        .status-bar { padding: 15px; text-align: center; background: #1a1917; color: var(--accent); font-weight: bold; }
-        .controls { padding: 10px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-        .repo-list { flex: 1; overflow-y: auto; }
-        .repo-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.85rem; color: #bababa; }
-        .repo-item.active { background: #2b2926; border-left: 4px solid var(--accent); color: white; }
+<header>
+    <button class="nav-btn" style="background:#444" onclick="window.location.href='index.html'">BACK</button>
+    <button id="whiteBtn" class="nav-btn" style="background:#fff; color:#000;" onclick="setMode('white')">WHITE MODE</button>
+    <button id="blackBtn" class="nav-btn" style="background:#000; color:#fff; border:1px solid #444;" onclick="setMode('black')">BLACK MODE</button>
+    
+    <button class="nav-btn" style="background:#4583b6" onclick="exportJSON()">EXPORT</button>
+    <button class="nav-btn" style="background:#fa412d" onclick="clearAll()">WIPE</button>
+</header>
 
-        @media (max-width: 900px) {
-            main { flex-direction: column; overflow-y: auto; }
-            .side-section { max-width: 100%; border-left: none; }
-            #board { max-width: 90vw; }
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <button class="nav-btn" style="background:#444" onclick="window.location.href='index.html'">BACK</button>
-        <button class="nav-btn" style="background:#666" onclick="flipBoard()">FLIP</button>
-        <button class="nav-btn" style="background:#4583b6" onclick="exportJSON()">EXPORT</button>
-        <label class="nav-btn" style="background:var(--accent); color:black;">LOAD <input type="file" id="fIn" hidden></label>
-        <button class="nav-btn" style="background:#fa412d" onclick="clearAll()">WIPE</button>
-    </header>
-    <main>
-        <section class="board-section">
-            <div id="board"></div>
-            <button onclick="resetDrill()" style="width:100%; max-width:480px; background:#333; color:white; border:none; padding:12px; margin-top:10px; border-radius:4px; font-weight:bold; cursor:pointer;">RESET POSITION</button>
-        </section>
-        <section class="side-section">
-            <div class="status-bar" id="status-msg">Select a line</div>
-            <div class="controls">
-                <button class="nav-btn" style="background:#3c3a38" onclick="showHint()">Hint</button>
-                <button class="nav-btn" style="background:#5c5a58" onclick="autoPlay()">Watch</button>
-                <button class="nav-btn" style="background:#4583b6" onclick="solveMove()">Solve</button>
-            </div>
-            <div class="repo-list" id="repoList"></div>
-        </section>
-    </main>
+<script>
+    let board = null, game = new Chess(), repoData = [], currentPath = [], moveIndex = 0, currentIdx = -1;
+    let trainerMode = 'white'; // Default mode
 
-    <script>
-        let board = null, game = new Chess(), repoData = [], currentPath = [], moveIndex = 0, currentIdx = -1;
-        const sounds = { move: new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard_/default/move-self.mp3'), capture: new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard_/default/capture.mp3') };
+    const sounds = { 
+        move: new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard_/default/move-self.mp3'), 
+        capture: new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard_/default/capture.mp3') 
+    };
 
-        window.onload = () => {
-            const orient = localStorage.getItem('board_orientation') || 'white';
-            board = Chessboard('board', { 
-                draggable: true, position: 'start', orientation: orient,
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-                onDrop: handleMove, onSnapEnd: () => board.position(game.fen())
-            });
+    window.onload = () => {
+        board = Chessboard('board', { 
+            draggable: true, position: 'start',
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+            onDrop: handleMove, onSnapEnd: () => board.position(game.fen())
+        });
 
-            const saved = localStorage.getItem('active_opening');
-            if (saved) {
-                repoData = JSON.parse(saved);
-                renderSidebar();
-                loadOpening(0);
-            }
-            window.addEventListener('resize', () => board.resize());
-        };
-
-        function handleMove(source, target) {
-            let move = game.move({ from: source, to: target, promotion: 'q' });
-            if (!move || move.san !== currentPath[moveIndex]) { if (move) game.undo(); return 'snapback'; }
-            processMove(move);
-        }
-
-        function processMove(move) {
-            move.san.includes('x') ? sounds.capture.play() : sounds.move.play();
-            moveIndex++;
-            board.position(game.fen());
-            if (moveIndex < currentPath.length) {
-                setTimeout(() => {
-                    let reply = game.move(currentPath[moveIndex++]);
-                    board.position(game.fen());
-                    reply.san.includes('x') ? sounds.capture.play() : sounds.move.play();
-                }, 450);
-            } else { $("#status-msg").text("Complete!"); }
-        }
-
-        function loadOpening(idx) {
-            currentIdx = idx; game.reset();
-            const pgn = repoData[idx].raw.replace(/\[.*?\]/g, '').trim();
-            game.load_pgn(pgn);
-            currentPath = game.history();
-            moveIndex = 0;
-            board.start();
-            
-            if (board.orientation() === 'black') {
-                setTimeout(() => {
-                    let first = game.move(currentPath[moveIndex++]);
-                    board.position(game.fen());
-                    sounds.move.play();
-                }, 500);
-            }
+        const saved = localStorage.getItem('active_opening');
+        if (saved) {
+            repoData = JSON.parse(saved);
             renderSidebar();
-            $("#status-msg").text(repoData[idx].name);
+            // Automatically detect if it's likely a black opening
+            const name = repoData[0].name.toLowerCase();
+            if (name.includes("sicilian") || name.includes("black")) {
+                setMode('black');
+            } else {
+                setMode('white');
+            }
         }
+    };
 
-        function flipBoard() {
-            const no = board.orientation() === 'white' ? 'black' : 'white';
-            board.orientation(no);
-            localStorage.setItem('board_orientation', no);
-            loadOpening(currentIdx);
+    function setMode(mode) {
+        trainerMode = mode;
+        board.orientation(mode);
+        
+        // UI Feedback
+        document.getElementById('whiteBtn').style.opacity = (mode === 'white') ? "1" : "0.5";
+        document.getElementById('blackBtn').style.opacity = (mode === 'black') ? "1" : "0.5";
+        
+        loadOpening(currentIdx !== -1 ? currentIdx : 0);
+    }
+
+    function handleMove(source, target) {
+        let move = game.move({ from: source, to: target, promotion: 'q' });
+        if (!move || move.san !== currentPath[moveIndex]) { 
+            if (move) game.undo(); 
+            return 'snapback'; 
         }
+        processMove(move);
+    }
 
-        function renderSidebar() {
-            document.getElementById('repoList').innerHTML = repoData.map((item, i) => `
-                <div class="repo-item ${currentIdx==i?'active':''}" onclick="loadOpening(${i})">${item.name}</div>`).join('');
+    function processMove(move) {
+        move.san.includes('x') ? sounds.capture.play() : sounds.move.play();
+        moveIndex++;
+        board.position(game.fen());
+        
+        // Computer automatically responds if moves are left
+        if (moveIndex < currentPath.length) {
+            setTimeout(() => {
+                let reply = game.move(currentPath[moveIndex++]);
+                board.position(game.fen());
+                reply.san.includes('x') ? sounds.capture.play() : sounds.move.play();
+                if (moveIndex === currentPath.length) $("#status-msg").text("Line Complete!");
+            }, 500);
+        } else {
+            $("#status-msg").text("Line Complete!");
         }
+    }
 
-        function exportJSON() {
-            const blob = new Blob([JSON.stringify(repoData)], {type: "application/json"});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); a.download = "opening.json"; a.click();
+    function loadOpening(idx) {
+        currentIdx = idx;
+        game.reset();
+        const pgn = repoData[idx].raw.replace(/\[.*?\]/g, '').trim();
+        game.load_pgn(pgn);
+        currentPath = game.history();
+        moveIndex = 0;
+        board.start();
+
+        // AUTOMATION LOGIC: If Black mode, computer plays 1. e4 (White's first move)
+        if (trainerMode === 'black' && moveIndex < currentPath.length) {
+            $("#status-msg").text("White is moving...");
+            setTimeout(() => {
+                let firstMove = game.move(currentPath[moveIndex++]);
+                board.position(game.fen());
+                sounds.move.play();
+                $("#status-msg").text("Your turn (Black)");
+            }, 600);
+        } else {
+            $("#status-msg").text("Your turn (White)");
         }
+        renderSidebar();
+    }
 
-        document.getElementById('fIn').onchange = async (e) => {
-            const text = await e.target.files[0].text();
-            repoData = JSON.parse(text);
-            localStorage.setItem('active_opening', text);
-            renderSidebar(); loadOpening(0);
-        };
+    function renderSidebar() {
+        document.getElementById('repoList').innerHTML = repoData.map((item, i) => `
+            <div class="repo-item ${currentIdx==i?'active':''}" onclick="loadOpening(${i})">${item.name}</div>`).join('');
+    }
 
-        function resetDrill() { loadOpening(currentIdx); }
-        function solveMove() { if (moveIndex < currentPath.length) processMove(game.move(currentPath[moveIndex])); }
-        function showHint() { alert("Next move: " + currentPath[moveIndex]); }
-        function clearAll() { localStorage.clear(); window.location.href='index.html'; }
-    </script>
-</body>
-</html>
+    function resetDrill() { loadOpening(currentIdx); }
+    function clearAll() { localStorage.clear(); window.location.href='index.html'; }
+</script>
