@@ -1,34 +1,46 @@
-<script>
-    async function loadMenu() {
-        const grid = document.getElementById('menuGrid');
-        const USER = "sathishkumar4359"; 
-        const REPO = "chess_trainer_library"; 
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ChessReps | Library</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; max-width: 800px; margin: 30px auto; }
+        .card { background: #262421; padding: 20px; border-radius: 8px; border: 1px solid #312e2b; cursor: pointer; }
+        .card:hover { border-color: #81b64c; }
+        h1 { color: #81b64c; }
+    </style>
+</head>
+<body>
+    <h1>My Openings</h1>
+    <div id="status">Loading files...</div>
+    <div class="grid" id="menuGrid"></div>
 
-        try {
-            const url = `https://api.github.com/repos/${USER}/${REPO}/contents/openings`;
-            const response = await fetch(url);
-            const files = await response.json();
-            grid.innerHTML = '';
-
-            for (const file of files) {
-                if (!file.name.endsWith('.json')) continue;
-                const contentRes = await fetch(file.download_url);
-                const rawText = await contentRes.text();
+    <script>
+        async function init() {
+            const USER = "sathishkumar4359";
+            const REPO = "chess_trainer_library";
+            try {
+                const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/contents/openings`);
+                const files = await res.json();
+                document.getElementById('status').style.display = 'none';
+                const grid = document.getElementById('menuGrid');
                 
-                let data;
-                try { data = JSON.parse(rawText); } 
-                catch(e) { data = [{ name: file.name.replace('.json',''), raw: rawText }]; }
-
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `<h3>${data[0].name || file.name}</h3>`;
-                card.onclick = () => {
-                    localStorage.setItem('active_opening', JSON.stringify(data));
-                    window.location.href = 'board.html';
-                };
-                grid.appendChild(card);
-            }
-        } catch (e) { console.error("Error loading library", e); }
-    }
-    window.onload = loadMenu;
-</script>
+                files.forEach(file => {
+                    if(file.name.endsWith('.json')) {
+                        const div = document.createElement('div');
+                        div.className = 'card';
+                        div.innerHTML = `<h3>${file.name.replace('.json','')}</h3>`;
+                        div.onclick = () => {
+                            localStorage.setItem('opening_url', file.download_url);
+                            window.location.href = 'board.html';
+                        };
+                        grid.appendChild(div);
+                    }
+                });
+            } catch (e) { document.getElementById('status').innerText = "Error loading files."; }
+        }
+        init();
+    </script>
+</body>
+</html>
