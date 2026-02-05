@@ -1,21 +1,6 @@
-[Event "Fried Liver Attack"]
-[Site "?"]
-[Date "????.??.??"]
-[Round "?"]
-[White "?"]
-[Black "?"]
-[Result "*"]
-[PlyCount "14"]
-[WhiteElo ""]
-[BlackElo ""]
-[ECO ""]
-[Link "https://www.chess.com/article/view/fried-liver-attack-chess-opening"]
-
-1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 {The Fried Liver Attack comes out of the Two
-Knights Defense.} 4. Ng5 {This aggressive move targets the vulnerable f7
-square.} 4... d5 5. exd5 Nxd5 {This capture on d5 by the knight allows white a
-very dangerous attack with a sacrifice.} 6. Nxf7 $1 {The true Fried Liver Attack
-move $1} 6... Kxf7 7. Qf3+ {The queen comes out with a double attack against the
-knight on d5 and the king.} 7... Ke6 {The only move if Black wants to save the
-knight. As you can see, the black king is very vulnerable on e6, and White will
-play aggressively to try and take advantage of the misplaced black king.} *
+[
+  {
+    "name": "Sicilian Defense",
+    "raw": "[Event \"Practice\"] [Result \"*\"] 1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 *"
+  }
+]
