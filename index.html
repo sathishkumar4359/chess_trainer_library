@@ -6,140 +6,52 @@
     <title>ChessReps | Opening Library</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --zinc-950: #09090b;
-            --zinc-900: #18181b;
-            --zinc-800: #27272a;
-            --zinc-700: #3f3f46;
-            --accent: #81b64c; /* Chess.com Green */
-            --violet: #a78bfa;
+        :root { --bg: #09090b; --card: #18181b; --border: #27272a; --accent: #81b64c; }
+        body { background: var(--bg); color: white; font-family: 'Nunito', sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; text-align: center; }
+        h1 { font-size: 2.5rem; color: white; margin-bottom: 40px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { 
+            background: var(--card); border: 1px solid var(--border); border-radius: 12px; 
+            padding: 20px; display: flex; align-items: center; gap: 15px; 
+            cursor: pointer; transition: 0.2s; position: relative;
         }
-
-        body {
-            background-color: var(--zinc-950);
-            color: #fff;
-            font-family: 'Nunito', sans-serif;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container { max-width: 1000px; margin: 0 auto; }
-
-        header { text-align: center; padding: 40px 0; }
-        h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 10px; }
-        p.subtitle { color: #a1a1aa; font-size: 1.1rem; }
-
-        /* The Grid */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
-        }
-
-        /* Modern Card Design */
-        .card {
-            background: linear-gradient(145deg, var(--zinc-800), var(--zinc-900));
-            border: 1px solid var(--zinc-700);
-            border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card:hover {
-            border-color: var(--violet);
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        /* Fake Image Thumbnail (Like Chessreps) */
-        .thumb {
-            width: 80px;
-            height: 80px;
-            background: var(--zinc-700);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-        }
-
-        .info { flex: 1; }
-        .info h3 { margin: 0; font-size: 1.25rem; color: #f4f4f5; }
-        .info p { margin: 5px 0 0; font-size: 0.85rem; color: #a1a1aa; }
-
-        .tag {
-            background: #fbbf24;
-            color: #000;
-            font-size: 10px;
-            font-weight: 800;
-            padding: 2px 8px;
-            border-radius: 4px;
-            position: absolute;
-            top: 15px;
-            right: 15px;
-        }
-
-        #status { text-align: center; color: var(--zinc-700); margin-top: 100px; }
+        .card:hover { border-color: var(--accent); transform: translateY(-4px); }
+        .thumb { width: 60px; height: 60px; background: #27272a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        .info { text-align: left; }
+        .info h3 { margin: 0; font-size: 1.1rem; }
+        .tag { position: absolute; top: 10px; right: 10px; background: #fbbf24; color: black; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <header>
-            <h1>Chess Opening Courses</h1>
-            <p class="subtitle">Master your repertoire with spaced repetition drills.</p>
-        </header>
-
-        <div id="status">Scanning your GitHub repository...</div>
+        <h1>Chess Opening Courses</h1>
+        <div id="status">Loading your library...</div>
         <div class="grid" id="menuGrid"></div>
     </div>
-
     <script>
-        async function fetchLibrary() {
-            const USER = "sathishkumar4359";
-            const REPO = "chess_trainer_library";
+        async function load() {
             const grid = document.getElementById('menuGrid');
-            const status = document.getElementById('status');
-
             try {
-                const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/contents/openings`);
+                const res = await fetch(`https://api.github.com/repos/sathishkumar4359/chess_trainer_library/contents/openings`);
                 const files = await res.json();
-                status.style.display = 'none';
-
+                document.getElementById('status').style.display = 'none';
                 files.forEach(file => {
-                    if (file.name.endsWith('.json') || file.name.endsWith('.pgn')) {
-                        const name = file.name.split('.')[0].replace(/_/g, ' ');
+                    if (file.name.endsWith('.pgn') || file.name.endsWith('.json')) {
                         const card = document.createElement('div');
                         card.className = 'card';
-                        
-                        card.innerHTML = `
-                            <div class="tag">NEW</div>
-                            <div class="thumb">♟️</div>
-                            <div class="info">
-                                <h3>${name}</h3>
-                                <p>Interactive practice mode</p>
-                            </div>
-                        `;
-
+                        card.innerHTML = `<div class="tag">NEW</div><div class="thumb">♟</div>
+                                         <div class="info"><h3>${file.name.replace(/\.[^/.]+$/, "").replace(/_/g, ' ')}</h3><p style="color:#71717a; font-size:12px;">Training Course</p></div>`;
                         card.onclick = () => {
-                            localStorage.setItem('opening_url', file.download_url);
+                            localStorage.setItem('active_url', file.download_url);
                             window.location.href = 'board.html';
                         };
                         grid.appendChild(card);
                     }
                 });
-            } catch (e) {
-                status.innerText = "Error: Could not connect to GitHub.";
-            }
+            } catch (e) { document.getElementById('status').innerText = "Error connecting to GitHub."; }
         }
-        fetchLibrary();
+        load();
     </script>
 </body>
 </html>
