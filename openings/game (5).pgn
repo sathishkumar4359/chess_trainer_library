@@ -1,0 +1,15 @@
+[Event "?"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Bf5 variation"]
+[Black "?"]
+[Result "1-0"]
+[ECO "B15"]
+[Annotator "chess-teacher.com"]
+[PlyCount "23"]
+[SourceVersionDate "2024.02.13"]
+1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Nf6 5. Ng5 h6 6. Nxf7 Kxf7 7. Nf3 Bf5 8.
+Ne5+ Kg8 9. Bc4+ Kh7 (9... Nd5 $1) 10. g4 Be4 11. g5 Bxh1 (11... hxg5 12. Nf7
+Qd7 13. Nxg5+ Kg6 14. Bf7+ Kh6 15. Nxe4+ Kh7 16. Nxf6+ exf6 17. Qh5#) 12. g6#
+1-0

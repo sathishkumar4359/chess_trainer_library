@@ -1,0 +1,15 @@
+[Event "?"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Refutation"]
+[Black "?"]
+[Result "0-1"]
+[ECO "B15"]
+[Annotator "chess-teacher.com"]
+[PlyCount "28"]
+[SourceVersionDate "2024.02.13"]
+1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Nf6 5. Ng5 h6 6. Nxf7 Kxf7 7. Nf3 c5 8.
+Bc4+ (8. Bd3 $5 Nc6 9. Ne5+ Nxe5 $2 10. dxe5 Nd5 11. c4 Nb6 12. Bg6+ Kxg6 13.
+Qxd8 $18) 8... e6 9. Ne5+ Kg8 10. c3 Nc6 11. Ng6 cxd4 12. Nxh8 Kxh8 13. cxd4
+Bb4+ 14. Bd2 Qxd4 0-1
