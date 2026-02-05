@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChessReps | My Openings</title>
+    <style>
+        :root { --bg: #121212; --panel: #262421; --accent: #81b64c; --text: #fff; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .card { 
+            background: var(--panel); padding: 20px; border-radius: 8px; 
+            border: 1px solid #312e2b; cursor: pointer; transition: 0.2s;
+        }
+        .card:hover { border-color: var(--accent); transform: translateY(-3px); }
+        .line-count { font-size: 0.8rem; color: #888; margin-top: 5px; }
+        h1 { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <h1>Opening Library</h1>
+    <div class="grid" id="menuGrid">Loading openings...</div>
+
+    <script>
+        async function loadMenu() {
+            const grid = document.getElementById('menuGrid');
+            try {
+                // 1. Get the list of filenames from the manifest
+                const manifestRes = await fetch('manifest.json');
+                const filenames = await manifestRes.json();
+                
+                grid.innerHTML = ''; // Clear loading text
+
+                // 2. Loop through each file to get its details
+                for (const file of filenames) {
+                    const res = await fetch(`openings/${file}`);
+                    const data = await res.json();
+                    
+                    // Handle both single objects and arrays of lines
+                    const lines = Array.isArray(data) ? data.length : 1;
+                    const name = data.name || file.replace('.json', '').replace('_', ' ');
+
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <h3>${name}</h3>
+                        <div class="line-count">${lines} Variations</div>
+                    `;
+                    card.onclick = () => launchTrainer(data);
+                    grid.appendChild(card);
+                }
+            } catch (e) {
+                grid.innerHTML = "Error loading manifest. Make sure you are using a local server (like Live Server in VS Code).";
+            }
+        }
+
+        function launchTrainer(openingData) {
+            // Store the specific opening in a temporary session slot
+            localStorage.setItem('active_opening', JSON.stringify(openingData));
+            window.location.href = 'board.html?mode=direct';
+        }
+
+        window.onload = loadMenu;
+    </script>
+</body>
+</html>
